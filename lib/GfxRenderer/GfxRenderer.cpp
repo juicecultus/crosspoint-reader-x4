@@ -288,6 +288,7 @@ void GfxRenderer::freeBwBufferChunks() {
  * Uses chunked allocation to avoid needing 48KB of contiguous memory.
  */
 void GfxRenderer::storeBwBuffer() {
+retry_store:
   const uint8_t* frameBuffer = einkDisplay.getFrameBuffer();
   if (!frameBuffer) {
     Serial.printf("[%lu] [GFX] !! No framebuffer in storeBwBuffer\n", millis());
@@ -310,8 +311,15 @@ void GfxRenderer::storeBwBuffer() {
     if (!bwBufferChunks[i]) {
       Serial.printf("[%lu] [GFX] !! Failed to allocate BW buffer chunk %zu (%zu bytes)\n", millis(), i,
                     BW_BUFFER_CHUNK_SIZE);
-      // Free previously allocated chunks
+      // Free previously allocated chunks and retry once after a short pause to combat fragmentation
       freeBwBufferChunks();
+      static bool retried = false;
+      if (!retried) {
+        retried = true;
+        vTaskDelay(5 / portTICK_PERIOD_MS);
+        goto retry_store;
+      }
+      retried = false;
       return;
     }
 
