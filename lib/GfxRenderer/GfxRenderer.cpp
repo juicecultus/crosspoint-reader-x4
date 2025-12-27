@@ -361,7 +361,9 @@ void GfxRenderer::restoreBwBuffer() {
     memcpy(frameBuffer + offset, bwBufferChunks[i], BW_BUFFER_CHUNK_SIZE);
   }
 
+#ifdef EINK_DISPLAY_SINGLE_BUFFER_MODE
   einkDisplay.cleanupGrayscaleBuffers(frameBuffer);
+#endif
 
   freeBwBufferChunks();
   Serial.printf("[%lu] [GFX] Restored and freed BW buffer chunks\n", millis());

@@ -223,33 +223,18 @@ bool ZipFile::readFileToStream(const char* filename, Print& out, const size_t ch
   }
 
   if (fileStat.m_method == MZ_DEFLATED) {
-    // Setup inflator
-    const auto inflator = static_cast<tinfl_decompressor*>(malloc(sizeof(tinfl_decompressor)));
-    if (!inflator) {
-      Serial.printf("[%lu] [ZIP] Failed to allocate memory for inflator\n", millis());
-      fclose(file);
-      return false;
-    }
+    // Setup inflator (static buffers to reduce fragmentation/alloc failures)
+    static tinfl_decompressor inflator_storage;
+    tinfl_decompressor* inflator = &inflator_storage;
     memset(inflator, 0, sizeof(tinfl_decompressor));
     tinfl_init(inflator);
 
-    // Setup file read buffer
-    const auto fileReadBuffer = static_cast<uint8_t*>(malloc(chunkSize));
-    if (!fileReadBuffer) {
-      Serial.printf("[%lu] [ZIP] Failed to allocate memory for zip file read buffer\n", millis());
-      free(inflator);
-      fclose(file);
-      return false;
-    }
+    // Use a small, fixed read buffer to avoid large allocations
+    static uint8_t fileReadBuffer[1024];
+    const size_t effectiveChunk = chunkSize < sizeof(fileReadBuffer) ? chunkSize : sizeof(fileReadBuffer);
 
-    const auto outputBuffer = static_cast<uint8_t*>(malloc(TINFL_LZ_DICT_SIZE));
-    if (!outputBuffer) {
-      Serial.printf("[%lu] [ZIP] Failed to allocate memory for dictionary\n", millis());
-      free(inflator);
-      free(fileReadBuffer);
-      fclose(file);
-      return false;
-    }
+    // Reusable output dictionary buffer
+    static uint8_t outputBuffer[TINFL_LZ_DICT_SIZE];
     memset(outputBuffer, 0, TINFL_LZ_DICT_SIZE);
 
     size_t fileRemainingBytes = deflatedDataSize;
@@ -267,7 +252,7 @@ bool ZipFile::readFileToStream(const char* filename, Print& out, const size_t ch
         }
 
         fileReadBufferFilledBytes =
-            fread(fileReadBuffer, 1, fileRemainingBytes < chunkSize ? fileRemainingBytes : chunkSize, file);
+            fread(fileReadBuffer, 1, fileRemainingBytes < effectiveChunk ? fileRemainingBytes : effectiveChunk, file);
         fileRemainingBytes -= fileReadBufferFilledBytes;
         fileReadBufferCursor = 0;
 
@@ -295,9 +280,6 @@ bool ZipFile::readFileToStream(const char* filename, Print& out, const size_t ch
         if (out.write(outputBuffer + outputCursor, outBytes) != outBytes) {
           Serial.printf("[%lu] [ZIP] Failed to write all output bytes to stream\n", millis());
           fclose(file);
-          free(outputBuffer);
-          free(fileReadBuffer);
-          free(inflator);
           return false;
         }
         // Update output position in buffer (with wraparound)
@@ -307,9 +289,6 @@ bool ZipFile::readFileToStream(const char* filename, Print& out, const size_t ch
       if (status < 0) {
         Serial.printf("[%lu] [ZIP] tinfl_decompress() failed with status %d\n", millis(), status);
         fclose(file);
-        free(outputBuffer);
-        free(fileReadBuffer);
-        free(inflator);
         return false;
       }
 
@@ -317,9 +296,6 @@ bool ZipFile::readFileToStream(const char* filename, Print& out, const size_t ch
         Serial.printf("[%lu] [ZIP] Decompressed %d bytes into %d bytes\n", millis(), deflatedDataSize,
                       inflatedDataSize);
         fclose(file);
-        free(inflator);
-        free(fileReadBuffer);
-        free(outputBuffer);
         return true;
       }
     }
@@ -327,9 +303,6 @@ bool ZipFile::readFileToStream(const char* filename, Print& out, const size_t ch
     // If we get here, EOF reached without TINFL_STATUS_DONE
     Serial.printf("[%lu] [ZIP] Unexpected EOF\n", millis());
     fclose(file);
-    free(outputBuffer);
-    free(fileReadBuffer);
-    free(inflator);
     return false;
   }
 

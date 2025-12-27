@@ -1,6 +1,8 @@
 #pragma once
 #include <FS.h>
 
+#include <string>
+
 class FsHelpers {
  public:
   static bool openFileForRead(const char* moduleName, const char* path, File& file);
