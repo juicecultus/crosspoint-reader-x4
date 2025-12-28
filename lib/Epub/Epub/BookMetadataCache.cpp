@@ -14,6 +14,26 @@ constexpr uint8_t BOOK_CACHE_VERSION = 1;
 constexpr char bookBinFile[] = "/book.bin";
 constexpr char tmpSpineBinFile[] = "/spine.bin.tmp";
 constexpr char tmpTocBinFile[] = "/toc.bin.tmp";
+
+std::string makeSyntheticTitle(const std::string& href) {
+  // Extract filename without extension
+  size_t lastSlash = href.find_last_of('/');
+  size_t start = (lastSlash == std::string::npos) ? 0 : lastSlash + 1;
+  size_t lastDot = href.find_last_of('.');
+  size_t end = (lastDot == std::string::npos || lastDot < start) ? href.length() : lastDot;
+  std::string title = href.substr(start, end - start);
+
+  // Capitalize first letter and replace underscores/dashes with spaces
+  if (!title.empty()) {
+    title[0] = toupper(title[0]);
+    for (size_t i = 1; i < title.length(); i++) {
+      if (title[i] == '_' || title[i] == '-') {
+        title[i] = ' ';
+      }
+    }
+  }
+  return title;
+}
 }  // namespace
 
 /* ============= WRITING / BUILDING FUNCTIONS ================ */
@@ -140,8 +160,13 @@ bool BookMetadataCache::buildBookBin(const std::string& epubPath, const BookMeta
     // Not a huge deal if we don't fine a TOC entry for the spine entry, this is expected behaviour for EPUBs
     // Logging here is for debugging
     if (spineEntry.tocIndex == -1) {
-      Serial.printf("[%lu] [BMC] Warning: Could not find TOC entry for spine item %d: %s\n", millis(), i,
+      Serial.printf("[%lu] [BMC] Info: Creating synthetic TOC entry for spine item %d: %s\n", millis(), i,
                     spineEntry.href.c_str());
+      const std::string title = makeSyntheticTitle(spineEntry.href);
+      const TocEntry syntheticEntry(title, spineEntry.href, "", 0, i);
+      spineEntry.tocIndex = tocCount;
+      writeTocEntry(tocFile, syntheticEntry);
+      tocCount++;
     }
 
     // Calculate size for cumulative size
@@ -164,6 +189,10 @@ bool BookMetadataCache::buildBookBin(const std::string& epubPath, const BookMeta
     auto tocEntry = readTocEntry(tocFile);
     writeTocEntry(bookFile, tocEntry);
   }
+
+  // Update tocCount in the header if synthetic entries were added
+  bookFile.seek(sizeof(BOOK_CACHE_VERSION) + sizeof(size_t) + sizeof(spineCount));
+  serialization::writePod(bookFile, tocCount);
 
   bookFile.close();
   spineFile.close();

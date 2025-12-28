@@ -13,14 +13,17 @@ class GfxRenderer {
   enum RenderMode { BW, GRAYSCALE_LSB, GRAYSCALE_MSB };
 
  private:
-  static constexpr size_t BW_BUFFER_CHUNK_SIZE = 8000;  // 8KB chunks to allow for non-contiguous memory
+  static constexpr size_t BW_BUFFER_CHUNK_SIZE = 4000;  // smaller chunks are more fragmentation-resistant
   static constexpr size_t BW_BUFFER_NUM_CHUNKS = EInkDisplay::BUFFER_SIZE / BW_BUFFER_CHUNK_SIZE;
   static_assert(BW_BUFFER_CHUNK_SIZE * BW_BUFFER_NUM_CHUNKS == EInkDisplay::BUFFER_SIZE,
                 "BW buffer chunking does not line up with display buffer size");
 
+  bool allocateBwPools();
   EInkDisplay& einkDisplay;
   RenderMode renderMode;
+  uint8_t* bwBufferPool = nullptr;
   uint8_t* bwBufferChunks[BW_BUFFER_NUM_CHUNKS] = {nullptr};
+  bool bwBufferValid = false;
   std::map<int, EpdFontFamily> fontMap;
   void renderChar(const EpdFontFamily& fontFamily, uint32_t cp, int* x, const int* y, bool pixelState,
                   EpdFontStyle style) const;
@@ -28,7 +31,7 @@ class GfxRenderer {
 
  public:
   explicit GfxRenderer(EInkDisplay& einkDisplay) : einkDisplay(einkDisplay), renderMode(BW) {}
-  ~GfxRenderer() = default;
+  ~GfxRenderer();
 
   // Setup
   void insertFont(int fontId, EpdFontFamily font);
