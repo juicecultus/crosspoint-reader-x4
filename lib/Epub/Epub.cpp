@@ -264,9 +264,13 @@ const std::string& Epub::getTitle() const {
 
 std::string Epub::getCoverBmpPath() const { return cachePath + "/cover.bmp"; }
 
-bool Epub::generateCoverBmp() const {
+std::string Epub::getThumbBmpPath() const { return cachePath + "/thumb.bmp"; }
+
+bool Epub::generateCoverBmp(bool thumb) const {
+  std::string path = thumb ? getThumbBmpPath() : getCoverBmpPath();
+
   // Already generated, return true
-  if (SD.exists(getCoverBmpPath().c_str())) {
+  if (SD.exists(path.c_str())) {
     return true;
   }
 
@@ -298,18 +302,18 @@ bool Epub::generateCoverBmp() const {
     }
 
     File coverBmp;
-    if (!FsHelpers::openFileForWrite("EBP", getCoverBmpPath(), coverBmp)) {
+    if (!FsHelpers::openFileForWrite("EBP", path, coverBmp)) {
       coverJpg.close();
       return false;
     }
-    const bool success = JpegToBmpConverter::jpegFileToBmpStream(coverJpg, coverBmp);
+    const bool success = JpegToBmpConverter::jpegFileToBmpStream(coverJpg, coverBmp, thumb ? 1 : 2, thumb ? 90 : 480, thumb ? 120 : 800);
     coverJpg.close();
     coverBmp.close();
     SD.remove(coverJpgTempPath.c_str());
 
     if (!success) {
       Serial.printf("[%lu] [EBP] Failed to generate BMP from JPG cover image\n", millis());
-      SD.remove(getCoverBmpPath().c_str());
+      SD.remove(path.c_str());
     }
     Serial.printf("[%lu] [EBP] Generated BMP from JPG cover image, success: %s\n", millis(), success ? "yes" : "no");
     return success;
