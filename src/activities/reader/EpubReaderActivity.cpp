@@ -107,6 +107,7 @@ void EpubReaderActivity::loop() {
           updateRequired = true;
         }));
     xSemaphoreGive(renderingMutex);
+    return;
   }
 
   // Long press BACK (1s+) goes directly to home
