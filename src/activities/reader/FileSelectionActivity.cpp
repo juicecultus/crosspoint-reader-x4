@@ -199,7 +199,8 @@ void FileSelectionActivity::render() const {
   renderer.fillRect(0, listStartY + (selectorIndex % PAGE_ITEMS) * rowHeight - 2, pageWidth - 1, rowHeight);
   for (int i = pageStartIndex; i < files.size() && i < pageStartIndex + PAGE_ITEMS; i++) {
     auto item = renderer.truncatedText(UI_10_FONT_ID, files[i].c_str(), pageWidth - horizontalMargin * 2 - 8);
-    renderer.drawText(UI_10_FONT_ID, horizontalMargin + 4, listStartY + (i % PAGE_ITEMS) * rowHeight, item.c_str(), i != selectorIndex);
+    renderer.drawText(UI_10_FONT_ID, horizontalMargin + 4, listStartY + (i % PAGE_ITEMS) * rowHeight, item.c_str(),
+                      i != selectorIndex);
   }
 
   renderer.displayBuffer();

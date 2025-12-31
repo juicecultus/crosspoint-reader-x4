@@ -13,7 +13,7 @@
 #include "fontIds.h"
 
 namespace {
-constexpr int pagesPerRefresh = 15;
+// pagesPerRefresh now comes from SETTINGS.getRefreshFrequency()
 constexpr unsigned long skipChapterMs = 700;
 constexpr unsigned long goHomeMs = 1000;
 constexpr int topPadding = 5;
@@ -22,9 +22,9 @@ constexpr int horizontalPadding = 5;
 // contentGap = space between last line of book text and delimiter line
 // lineToText = space between delimiter line and footer text
 // footerTextHeight ~= 12px for small font
-constexpr int footerHeight = 34;      // total footer area height (includes bottom margin)
-constexpr int contentGap = 6;         // gap above delimiter line
-constexpr int lineToText = 6;         // gap below delimiter line to text
+constexpr int footerHeight = 34;  // total footer area height (includes bottom margin)
+constexpr int contentGap = 6;     // gap above delimiter line
+constexpr int lineToText = 6;     // gap below delimiter line to text
 }  // namespace
 
 void EpubReaderActivity::taskTrampoline(void* param) {
@@ -384,7 +384,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   renderStatusBar(orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
   if (pagesUntilFullRefresh <= 1) {
     renderer.displayBuffer(EInkDisplay::HALF_REFRESH);
-    pagesUntilFullRefresh = pagesPerRefresh;
+    pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
   } else {
     renderer.displayBuffer();
     pagesUntilFullRefresh--;
@@ -431,12 +431,12 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
   // So book content ends at: screenHeight - orientedMarginBottom
   // Line should be at: screenHeight - orientedMarginBottom + contentGap (just below content)
   // Footer text at: lineY + lineToText + some offset for text baseline
-  
+
   const auto screenHeight = renderer.getScreenHeight();
   const int contentBottom = screenHeight - orientedMarginBottom;
   const int lineY = contentBottom + contentGap;
   const int textY = lineY + lineToText;
-  
+
   renderer.drawLine(orientedMarginLeft, lineY, renderer.getScreenWidth() - orientedMarginRight, lineY);
 
   int progressTextWidth = 0;

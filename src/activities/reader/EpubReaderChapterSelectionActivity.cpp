@@ -123,8 +123,8 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
   const int pageItems = getPageItems();
 
   // Draw header with book title
-  const std::string title =
-      renderer.truncatedText(UI_12_FONT_ID, epub->getTitle().c_str(), pageWidth - horizontalMargin * 2, EpdFontFamily::BOLD);
+  const std::string title = renderer.truncatedText(UI_12_FONT_ID, epub->getTitle().c_str(),
+                                                   pageWidth - horizontalMargin * 2, EpdFontFamily::BOLD);
   renderer.drawCenteredText(UI_12_FONT_ID, headerY, title.c_str(), true, EpdFontFamily::BOLD);
 
   // Subtle separator line under header
