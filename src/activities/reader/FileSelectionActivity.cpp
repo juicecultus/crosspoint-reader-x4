@@ -220,7 +220,16 @@ void FileSelectionActivity::render() const {
   const auto pageStartIndex = selectorIndex / PAGE_ITEMS * PAGE_ITEMS;
   renderer.fillRect(0, listStartY + (selectorIndex % PAGE_ITEMS) * rowHeight - 2, pageWidth - 1, rowHeight);
   for (int i = pageStartIndex; i < files.size() && i < pageStartIndex + PAGE_ITEMS; i++) {
-    auto item = renderer.truncatedText(UI_10_FONT_ID, files[i].c_str(), pageWidth - horizontalMargin * 2 - 8);
+    const auto& filename = files[i];
+    const bool isDir = !filename.empty() && filename.back() == '/';
+    // Format: folders show as "> FolderName", files show as "  FileName"
+    std::string displayName;
+    if (isDir) {
+      displayName = "> " + filename.substr(0, filename.length() - 1);
+    } else {
+      displayName = "  " + filename;
+    }
+    auto item = renderer.truncatedText(UI_10_FONT_ID, displayName.c_str(), pageWidth - horizontalMargin * 2 - 8);
     renderer.drawText(UI_10_FONT_ID, horizontalMargin + 4, listStartY + (i % PAGE_ITEMS) * rowHeight, item.c_str(),
                       i != selectorIndex);
   }
